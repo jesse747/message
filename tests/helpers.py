@@ -1,7 +1,6 @@
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from flask_jwt_extended import create_access_token
 from src.message.models import InviteToken, Person, User
 
 
@@ -36,7 +35,7 @@ def register_user_via_invite(client, db, username, email, password="password123"
         person_id=person.id,
         email=email,
         created_by=creator.id,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        expires_at=datetime.now(UTC) + timedelta(days=7),
     )
     db.session.add(invite)
     db.session.commit()

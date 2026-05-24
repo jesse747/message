@@ -1,7 +1,7 @@
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from src.message.models import InviteToken, Person, User
+from src.message.models import InviteToken, PasswordResetToken, Person, User
 from tests.helpers import register_user_via_invite
 
 
@@ -11,7 +11,7 @@ class TestRegister:
         assert r.status_code == 201
         data = r.get_json()["data"]
         assert "access_token" in data
-        assert "refresh_token" in data
+        assert "refresh_token" not in data
         assert data["user"]["username"] == "newuser"
 
     def test_register_duplicate_username(self, client, db, auth_headers):
@@ -50,7 +50,7 @@ class TestRegister:
             person_id=person.id,
             email="expired@example.com",
             created_by=creator.id,
-            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+            expires_at=datetime.now(UTC) - timedelta(days=1),
         )
         db.session.add(invite)
         db.session.commit()
@@ -86,7 +86,7 @@ class TestRegister:
             person_id=person.id,
             email="correct@example.com",
             created_by=creator.id,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+            expires_at=datetime.now(UTC) + timedelta(days=7),
         )
         db.session.add(invite)
         db.session.commit()
@@ -140,29 +140,156 @@ class TestMe:
 class TestRefresh:
     def test_refresh_success(self, client, db):
         r = register_user_via_invite(client, db, "refreshtest", "refresh@example.com")
-        refresh = r.get_json()["data"]["refresh_token"]
-        r = client.post("/api/v1/auth/tokens", json={"refresh_token": refresh})
+        assert r.status_code == 201
+        r = client.post("/api/v1/auth/tokens")
         assert r.status_code == 200
         data = r.get_json()["data"]
         assert "access_token" in data
-        assert "refresh_token" in data
 
-    def test_refresh_invalid_token(self, client, db):
-        r = client.post("/api/v1/auth/tokens", json={"refresh_token": "invalid"})
+    def test_refresh_no_cookie(self, client, db):
+        r = client.post("/api/v1/auth/tokens")
         assert r.status_code == 401
 
-    def test_refresh_empty_body(self, client, db):
-        r = client.post("/api/v1/auth/tokens", json={})
+    def test_refresh_invalid_token(self, client, db):
+        client.set_cookie(
+            "refresh_token", "invalid", path="/api/v1/auth"
+        )
+        r = client.post("/api/v1/auth/tokens")
         assert r.status_code == 401
 
 
 class TestLogout:
     def test_logout_success(self, client, db):
         r = register_user_via_invite(client, db, "logouttest", "logout@example.com")
-        refresh = r.get_json()["data"]["refresh_token"]
-        r = client.delete("/api/v1/auth/sessions", json={"refresh_token": refresh})
+        assert r.status_code == 201
+        r = client.delete("/api/v1/auth/sessions")
         assert r.status_code == 204
 
-    def test_logout_no_refresh_token(self, client, db):
-        r = client.delete("/api/v1/auth/sessions", json={})
+    def test_logout_no_cookie(self, client, db):
+        r = client.delete("/api/v1/auth/sessions")
         assert r.status_code == 400
+
+
+class TestPasswordReset:
+    def test_request_invalid_email(self, client, db):
+        r = client.post("/api/v1/auth/password-reset", json={"email": "notanemail"})
+        assert r.status_code == 422
+
+    def test_request_empty_body(self, client, db):
+        r = client.post("/api/v1/auth/password-reset", json={})
+        assert r.status_code == 422
+
+    def test_request_nonexistent_email(self, client, db):
+        r = client.post(
+            "/api/v1/auth/password-reset",
+            json={"email": "noone@example.com"},
+        )
+        assert r.status_code == 200
+        assert "message" in r.get_json()["data"]
+
+    def test_request_sends_email(self, app, client, db):
+        register_user_via_invite(client, db, "resetuser", "reset@example.com")
+        from src.message.extensions import mail
+
+        with mail.record_messages() as outbox:
+            r = client.post(
+                "/api/v1/auth/password-reset",
+                json={"email": "reset@example.com"},
+            )
+            assert r.status_code == 200
+        assert len(outbox) == 1
+        assert "password" in outbox[0].body.lower()
+
+    def test_confirm_invalid_token(self, client, db):
+        r = client.post(
+            "/api/v1/auth/password-reset/confirm",
+            json={"token": "bad", "password": "newpass123"},
+        )
+        assert r.status_code == 410
+
+    def test_confirm_expired_token(self, client, db, app):
+        from datetime import UTC, datetime, timedelta
+        from src.message.models import PasswordResetToken
+
+        user = register_user_via_invite(client, db, "exptest", "expired@example.com")
+        with app.app_context():
+            u = User.query.filter_by(email="expired@example.com").first()
+            token = PasswordResetToken(
+                code=secrets.token_urlsafe(32),
+                user_id=u.id,
+                email=u.email,
+                expires_at=datetime.now(UTC) - timedelta(hours=1),
+            )
+            db.session.add(token)
+            db.session.commit()
+            code = token.code
+
+        r = client.post(
+            "/api/v1/auth/password-reset/confirm",
+            json={"token": code, "password": "newpass123"},
+        )
+        assert r.status_code == 410
+
+    def test_confirm_success(self, client, db, app):
+        from datetime import UTC, datetime, timedelta
+        from src.message.models import PasswordResetToken
+
+        register_user_via_invite(client, db, "pwuser", "pw@example.com")
+        with app.app_context():
+            u = User.query.filter_by(email="pw@example.com").first()
+            token = PasswordResetToken(
+                code=secrets.token_urlsafe(32),
+                user_id=u.id,
+                email=u.email,
+                expires_at=datetime.now(UTC) + timedelta(hours=1),
+            )
+            db.session.add(token)
+            db.session.commit()
+            code = token.code
+
+        r = client.post(
+            "/api/v1/auth/password-reset/confirm",
+            json={"token": code, "password": "newpassword456"},
+        )
+        assert r.status_code == 200
+        assert r.get_json()["data"]["message"] == "Password has been reset successfully."
+
+        r = client.post(
+            "/api/v1/auth/sessions",
+            json={"username": "pwuser", "password": "newpassword456"},
+        )
+        assert r.status_code == 200
+
+    def test_confirm_short_password(self, client, db):
+        r = client.post(
+            "/api/v1/auth/password-reset/confirm",
+            json={"token": "x", "password": "short"},
+        )
+        assert r.status_code == 422
+
+    def test_confirm_token_reuse(self, client, db, app):
+        from datetime import UTC, datetime, timedelta
+        from src.message.models import PasswordResetToken
+
+        register_user_via_invite(client, db, "reuse", "reuse@example.com")
+        with app.app_context():
+            u = User.query.filter_by(email="reuse@example.com").first()
+            token = PasswordResetToken(
+                code=secrets.token_urlsafe(32),
+                user_id=u.id,
+                email=u.email,
+                expires_at=datetime.now(UTC) + timedelta(hours=1),
+            )
+            db.session.add(token)
+            db.session.commit()
+            code = token.code
+
+        client.post(
+            "/api/v1/auth/password-reset/confirm",
+            json={"token": code, "password": "firstpass1"},
+        )
+        r = client.post(
+            "/api/v1/auth/password-reset/confirm",
+            json={"token": code, "password": "secondpass2"},
+        )
+        assert r.status_code == 410

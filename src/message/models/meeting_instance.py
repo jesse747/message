@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -14,11 +14,11 @@ class MeetingInstance(db.Model):
     cancelled = db.Column(db.Boolean, default=False)
     notes = db.Column(db.Text, nullable=True)
     cancellation_message = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     meeting = db.relationship("Meeting", back_populates="instances")

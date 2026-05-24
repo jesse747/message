@@ -1,11 +1,11 @@
-from flask import Blueprint, request, abort
+from flask import Blueprint, abort, request
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 
 from ...authz import require_capability
 from ...extensions import db
 from ...models import Duty, DutyAssignment
-from ...schemas.roster import DutySchema, DutyAssignmentSchema
+from ...schemas.roster import DutyAssignmentSchema, DutySchema
 
 bp = Blueprint("duties", __name__)
 duty_schema = DutySchema()
@@ -90,9 +90,22 @@ def create_assignment(duty_id):
     try:
         data = assignment_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            }
+        }, 422
 
     a = DutyAssignment(**data, duty_id=duty_id)
     db.session.add(a)
     db.session.commit()
-    return {"data": {"id": a.id, "person_id": a.person_id, "duty_id": duty_id, "date": str(a.date)}}, 201
+    return {
+        "data": {
+            "id": a.id,
+            "person_id": a.person_id,
+            "duty_id": duty_id,
+            "date": str(a.date),
+        }
+    }, 201

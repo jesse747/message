@@ -1,0 +1,15 @@
+{% extends "email/base.txt" %}
+{% block content %}
+Hi {{ person_name }},
+
+You've been invited to create an account on {{ org_name }}.
+
+Please use the following link to register:
+{{ register_url }}
+
+Your invite code: {{ invite_code }}
+
+This invite expires on {{ expires_at }}.
+
+If you have any questions, please contact the administrator.
+{% endblock %}

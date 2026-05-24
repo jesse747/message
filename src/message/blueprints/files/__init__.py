@@ -1,9 +1,7 @@
 import os
-import uuid
-from datetime import datetime, timezone
 
-from flask import Blueprint, abort, current_app, request, send_from_directory
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, abort, current_app, send_from_directory
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from ...extensions import db
 from ...models import File, User
@@ -18,7 +16,10 @@ def _file_data(f):
         "type": f.type,
         "size_kb": round(f.size / 1024, 1) if f.size else 0,
         "url": f"/api/v1/files/{f.id}",
-        "uploaded_by": {"id": f.uploaded_by, "name": f.uploader.display_name if f.uploader else None},
+        "uploaded_by": {
+            "id": f.uploaded_by,
+            "name": f.uploader.display_name if f.uploader else None,
+        },
         "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
     }
 

@@ -1,6 +1,5 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from flask_jwt_extended import get_jwt_identity
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from ..extensions import db
@@ -16,16 +15,25 @@ class User(db.Model):
     display_name = db.Column(db.String(100), nullable=False)
     avatar = db.Column(db.String(200), nullable=True)
     is_super_admin = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
-    person = db.relationship("Person", uselist=False, back_populates="user", foreign_keys="Person.user_id")
-    permissions = db.relationship("UserPermission", back_populates="user", cascade="all, delete-orphan")
-    refresh_tokens = db.relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    person = db.relationship(
+        "Person",
+        uselist=False,
+        back_populates="user",
+        foreign_keys="Person.user_id",
+    )
+    permissions = db.relationship(
+        "UserPermission", back_populates="user", cascade="all, delete-orphan"
+    )
+    refresh_tokens = db.relationship(
+        "RefreshToken", back_populates="user", cascade="all, delete-orphan"
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

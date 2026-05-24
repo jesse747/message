@@ -1,7 +1,7 @@
-from marshmallow import Schema, fields, validate, validates_schema, ValidationError
+from marshmallow import Schema, ValidationError, fields, validate, validates_schema
 
 from ..extensions import ma
-from ..models import DutyGroup, Duty, DutyGroupMembership, DutyAssignment
+from ..models import Duty, DutyAssignment, DutyGroup, DutyGroupMembership
 
 
 class SwapChangeSchema(Schema):
@@ -10,9 +10,12 @@ class SwapChangeSchema(Schema):
     to_person_id = fields.Integer(required=True)
 
     @validates_schema
-    def validate_not_same(self, data, **kwargs):
+    def validate_not_same(self, data, **_kwargs):
         if data["from_person_id"] == data["to_person_id"]:
-            raise ValidationError("from_person_id and to_person_id must differ", field_name="to_person_id")
+            raise ValidationError(
+                "from_person_id and to_person_id must differ",
+                field_name="to_person_id",
+            )
 
 
 class SwapSchema(Schema):

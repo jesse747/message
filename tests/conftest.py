@@ -1,9 +1,31 @@
 import os
+
 import pytest
 from flask_jwt_extended import create_access_token
-from src.message import create_app, db as _db
-from src.message.models import Person, User, Team, Group, Flock
+
+from src.message import create_app
+from src.message import db as _db
 from tests.helpers import create_user
+
+
+@pytest.fixture
+def event_type(app, client, db, admin_headers):
+    """Seed default event types and return the Baptism entry."""
+    default_types = [
+        "Baptism", "Confirmation", "First Communion", "Wedding", "Funeral",
+        "Membership Started", "Transfer", "Child Dedication",
+        "Profession of Faith", "Other",
+    ]
+    result = None
+    for name in default_types:
+        r = client.post(
+            "/api/v1/event-types",
+            json={"name": name, "sort_order": 0},
+            headers=admin_headers,
+        )
+        if name == "Baptism":
+            result = r.get_json()["data"]
+    return result
 
 
 @pytest.fixture(scope="session")

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta, date
+from datetime import UTC, date, datetime, timedelta
 
 from ..extensions import db
 
@@ -17,17 +17,20 @@ class Meeting(db.Model):
     location = db.Column(db.String(200), nullable=True)
     frequency = db.Column(db.String(20), default="weekly")
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     team = db.relationship("Team", back_populates="meetings")
     group = db.relationship("Group", back_populates="meetings")
     instances = db.relationship(
-        "MeetingInstance", back_populates="meeting", cascade="all, delete-orphan", order_by="MeetingInstance.date"
+        "MeetingInstance",
+        back_populates="meeting",
+        cascade="all, delete-orphan",
+        order_by="MeetingInstance.date",
     )
 
     def generate_instances(self, count=12):

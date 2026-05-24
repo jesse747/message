@@ -1,6 +1,5 @@
-from flask import Blueprint, request, abort
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from marshmallow import ValidationError
+from flask import Blueprint, abort, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import or_
 
 from ...extensions import db
@@ -41,7 +40,12 @@ def list_users():
             }
             for u in users
         ],
-        "meta": {"page": page, "limit": limit, "total": total, "pages": (total + limit - 1) // limit if total else 0},
+        "meta": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "pages": (total + limit - 1) // limit if total else 0,
+        },
     }, 200
 
 

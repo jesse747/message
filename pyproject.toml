@@ -14,6 +14,8 @@ dependencies = [
     "flask-marshmallow>=1.2",
     "marshmallow-sqlalchemy>=1.2",
     "python-dotenv>=1.1",
+    "flask-mail>=0.10",
+    "flasgger>=0.9",
     "gunicorn>=23.0",
 ]
 
@@ -35,6 +37,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "ARG"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["ARG001", "ARG002", "F841"]
 
 [tool.ruff.format]
 quote-style = "double"

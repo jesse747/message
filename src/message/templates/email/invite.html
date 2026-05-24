@@ -1,0 +1,22 @@
+{% extends "email/base.html" %}
+{% block content %}
+<p>Hi {{ person_name }},</p>
+
+<p>You've been invited to create an account on {{ org_name }}.</p>
+
+<p>
+  <a href="{{ register_url }}"
+     style="display: inline-block; padding: 10px 20px; background: #4a90d9; color: #fff; text-decoration: none; border-radius: 4px;">
+    Create Your Account
+  </a>
+</p>
+
+<p>Or copy and paste this link:</p>
+<p style="word-break: break-all; color: #666;"><code>{{ register_url }}</code></p>
+
+<p>Your invite code: <strong>{{ invite_code }}</strong></p>
+
+<p>This invite expires on {{ expires_at }}.</p>
+
+<p>If you have any questions, please contact the administrator.</p>
+{% endblock %}

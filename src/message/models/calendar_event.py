@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -14,6 +14,8 @@ class CalendarEvent(db.Model):
     location = db.Column(db.String(200), nullable=True)
     color = db.Column(db.String(7), nullable=True)
     is_all_day = db.Column(db.Boolean, default=False)
+    start_time = db.Column(db.Time, nullable=True)
+    end_time = db.Column(db.Time, nullable=True)
     frequency = db.Column(db.String(20), default="none")
     first_date = db.Column(db.Date, nullable=True)
     last_date = db.Column(db.Date, nullable=True)
@@ -25,16 +27,20 @@ class CalendarEvent(db.Model):
     nth_month = db.Column(db.Integer, nullable=True)
     target_month = db.Column(db.Integer, nullable=True)
     target_day = db.Column(db.Integer, nullable=True)
-    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_by = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     creator = db.relationship("User")
-    overrides = db.relationship("CalendarOverride", back_populates="event", cascade="all, delete-orphan")
+    overrides = db.relationship(
+        "CalendarOverride", back_populates="event", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<CalendarEvent {self.title}>"

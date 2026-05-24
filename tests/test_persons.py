@@ -206,3 +206,127 @@ class TestPersonPhoto:
 
         r = client.get(f"/api/v1/persons/{person['id']}/photo", headers=admin_headers)
         assert r.data == b"second-image"
+
+
+class TestPersonEvents:
+    def test_list_events_empty(self, client, db, auth_headers, person, event_type):
+        r = client.get(f"/api/v1/persons/{person['id']}/events", headers=auth_headers)
+        assert r.status_code == 200
+        assert r.get_json()["data"] == []
+
+    def test_create_event_success(self, client, db, admin_headers, person, event_type):
+        r = client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={
+                "event_type_id": event_type["id"],
+                "event_date": "2024-06-15",
+                "location": "Main Church",
+                "notes": "Test baptism",
+            },
+            headers=admin_headers,
+        )
+        assert r.status_code == 201
+        data = r.get_json()["data"]
+        assert data["event_type_id"] == event_type["id"]
+        assert data["event_date"] == "2024-06-15"
+        assert data["location"] == "Main Church"
+        assert data["notes"] == "Test baptism"
+        assert data["event_type"] == "Baptism"
+
+    def test_create_event_without_capability(self, client, db, auth_headers, person, event_type):
+        r = client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={"event_type_id": event_type["id"], "event_date": "2024-01-01"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 403
+
+    def test_create_event_bad_event_type(self, client, db, admin_headers, person):
+        r = client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={"event_type_id": 99999, "event_date": "2024-01-01"},
+            headers=admin_headers,
+        )
+        assert r.status_code == 404
+
+    def test_create_event_validation_error(self, client, db, admin_headers, person):
+        r = client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={},
+            headers=admin_headers,
+        )
+        assert r.status_code == 422
+
+    def test_list_events(self, client, db, admin_headers, person, event_type):
+        client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={"event_type_id": event_type["id"], "event_date": "2024-01-01"},
+            headers=admin_headers,
+        )
+        r = client.get(f"/api/v1/persons/{person['id']}/events", headers=admin_headers)
+        assert r.status_code == 200
+        assert len(r.get_json()["data"]) == 1
+
+    def test_get_event(self, client, db, admin_headers, person, event_type):
+        r = client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={"event_type_id": event_type["id"], "event_date": "2024-03-20"},
+            headers=admin_headers,
+        )
+        eid = r.get_json()["data"]["id"]
+        r = client.get(
+            f"/api/v1/persons/{person['id']}/events/{eid}", headers=admin_headers
+        )
+        assert r.status_code == 200
+        assert r.get_json()["data"]["event_date"] == "2024-03-20"
+
+    def test_get_event_not_found(self, client, db, admin_headers, person):
+        r = client.get(
+            f"/api/v1/persons/{person['id']}/events/99999", headers=admin_headers
+        )
+        assert r.status_code == 404
+
+    def test_update_event(self, client, db, admin_headers, person, event_type):
+        r = client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={"event_type_id": event_type["id"], "event_date": "2024-04-10"},
+            headers=admin_headers,
+        )
+        eid = r.get_json()["data"]["id"]
+        r = client.patch(
+            f"/api/v1/persons/{person['id']}/events/{eid}",
+            json={"location": "Updated Location", "notes": "Updated notes"},
+            headers=admin_headers,
+        )
+        assert r.status_code == 200
+        data = r.get_json()["data"]
+        assert data["location"] == "Updated Location"
+        assert data["notes"] == "Updated notes"
+
+    def test_delete_event(self, client, db, admin_headers, person, event_type):
+        r = client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={"event_type_id": event_type["id"], "event_date": "2024-05-05"},
+            headers=admin_headers,
+        )
+        eid = r.get_json()["data"]["id"]
+        r = client.delete(
+            f"/api/v1/persons/{person['id']}/events/{eid}", headers=admin_headers
+        )
+        assert r.status_code == 204
+        r = client.get(
+            f"/api/v1/persons/{person['id']}/events/{eid}", headers=admin_headers
+        )
+        assert r.status_code == 404
+
+    def test_person_detail_includes_events(self, client, db, admin_headers, person, event_type):
+        client.post(
+            f"/api/v1/persons/{person['id']}/events",
+            json={"event_type_id": event_type["id"], "event_date": "2024-01-01"},
+            headers=admin_headers,
+        )
+        r = client.get(f"/api/v1/persons/{person['id']}", headers=admin_headers)
+        assert r.status_code == 200
+        events = r.get_json()["data"]["events"]
+        assert len(events) >= 1
+        assert events[0]["event_type"] == "Baptism"

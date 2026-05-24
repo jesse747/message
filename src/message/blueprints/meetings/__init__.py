@@ -1,5 +1,5 @@
-from flask import Blueprint, request, abort
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, abort, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from marshmallow import ValidationError
 
 from ...extensions import db
@@ -54,7 +54,13 @@ def update_meeting(id):
     try:
         data = meeting_schema.load(request.json, partial=True)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            }
+        }, 422
 
     for key, val in data.items():
         setattr(meeting, key, val)

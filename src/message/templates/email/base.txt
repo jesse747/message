@@ -1,0 +1,7 @@
+{{ org_name }}
+
+{% block content %}{% endblock %}
+
+---
+
+This email was sent by {{ org_name }}.

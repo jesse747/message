@@ -1,6 +1,5 @@
-from flask import Blueprint, request, abort
+from flask import Blueprint, abort, request
 from flask_jwt_extended import jwt_required
-from marshmallow import ValidationError
 
 from ...authz import require_capability
 from ...extensions import db
@@ -37,7 +36,12 @@ def update_override(id):
             setattr(o, key, data[key])
     db.session.commit()
     return {
-        "data": {"id": o.id, "event_id": o.event_id, "date": str(o.date), "is_cancelled": o.is_cancelled}
+        "data": {
+            "id": o.id,
+            "event_id": o.event_id,
+            "date": str(o.date),
+            "is_cancelled": o.is_cancelled,
+        }
     }, 200
 
 

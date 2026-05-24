@@ -1,6 +1,7 @@
-from flask import Blueprint, request, abort
+from flask import Blueprint, abort, request
 from flask_jwt_extended import jwt_required
-from marshmallow import Schema, fields, validate, validates_schema, ValidationError as MarshmallowError
+from marshmallow import Schema, fields, validate, validates_schema
+from marshmallow import ValidationError as MarshmallowError
 
 from ...authz import require_capability
 from ...extensions import db
@@ -18,9 +19,12 @@ class RelationshipSchema(Schema):
     )
 
     @validates_schema
-    def check_not_self(self, data, **kwargs):
+    def check_not_self(self, data, **_kwargs):
         if data["person_1_id"] == data["person_2_id"]:
-            raise MarshmallowError("Cannot create a relationship with yourself", field_name="person_2_id")
+            raise MarshmallowError(
+                "Cannot create a relationship with yourself",
+                field_name="person_2_id",
+            )
 
 
 relationship_schema = RelationshipSchema()
@@ -34,7 +38,8 @@ def list_relationships():
     if person_id:
         db.session.get(Person, person_id) or abort(404)
         query = query.filter(
-            (FamilyRelationship.person_1_id == person_id) | (FamilyRelationship.person_2_id == person_id)
+            (FamilyRelationship.person_1_id == person_id)
+            | (FamilyRelationship.person_2_id == person_id)
         )
     relationships = query.order_by(FamilyRelationship.created_at.desc()).all()
     return {
@@ -57,14 +62,26 @@ def create_relationship():
     try:
         data = relationship_schema.load(request.json)
     except MarshmallowError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            }
+        }, 422
 
     db.session.get(Person, data["person_1_id"]) or abort(404)
     db.session.get(Person, data["person_2_id"]) or abort(404)
 
     existing = FamilyRelationship.query.filter(
-        ((FamilyRelationship.person_1_id == data["person_1_id"]) & (FamilyRelationship.person_2_id == data["person_2_id"]))
-        | ((FamilyRelationship.person_1_id == data["person_2_id"]) & (FamilyRelationship.person_2_id == data["person_1_id"]))
+        (
+            (FamilyRelationship.person_1_id == data["person_1_id"])
+            & (FamilyRelationship.person_2_id == data["person_2_id"])
+        )
+        | (
+            (FamilyRelationship.person_1_id == data["person_2_id"])
+            & (FamilyRelationship.person_2_id == data["person_1_id"])
+        )
     ).first()
     if existing:
         return {"error": {"code": "CONFLICT", "message": "Relationship already exists"}}, 409

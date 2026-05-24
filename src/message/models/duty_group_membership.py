@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -11,7 +11,7 @@ class DutyGroupMembership(db.Model):
     person_id = db.Column(db.Integer, db.ForeignKey("persons.id"), nullable=False)
     date_from = db.Column(db.Date, nullable=False)
     date_to = db.Column(db.Date, nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     duty_group = db.relationship("DutyGroup", back_populates="memberships")
     person = db.relationship("Person")

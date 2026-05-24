@@ -122,3 +122,11 @@ def _register_blueprints(app):
     from .blueprints.admin import bp as admin_bp
 
     app.register_blueprint(admin_bp, url_prefix=f"{prefix}/admin")
+
+    from .blueprints.event_types import bp as event_types_bp
+
+    app.register_blueprint(event_types_bp, url_prefix=f"{prefix}/event-types")
+
+    from .blueprints.settings import bp as settings_bp
+
+    app.register_blueprint(settings_bp, url_prefix=f"{prefix}/settings")

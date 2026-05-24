@@ -2,7 +2,7 @@ import click
 from flask.cli import with_appcontext
 
 from .extensions import db
-from .models import Family, Organization, OrganizationContact, Person, User
+from .models import AppSetting, EventType, Family, Organization, OrganizationContact, Person, User
 
 
 @click.command("seed")
@@ -11,6 +11,8 @@ from .models import Family, Organization, OrganizationContact, Person, User
 def seed_command(superuser):
     """Seed the database with initial data."""
     _seed_superuser()
+    _seed_event_types()
+    _seed_app_settings()
     if superuser:
         return
     _seed_organization()
@@ -42,6 +44,55 @@ def _seed_superuser():
     db.session.add(person)
     db.session.commit()
     click.echo("Created superuser: admin / changeme")
+
+
+DEFAULT_EVENT_TYPES = [
+    ("Baptism", "Water baptism ceremony", 0),
+    ("Confirmation", "Confirmation of faith", 1),
+    ("First Communion", "First participation in communion", 2),
+    ("Wedding", "Marriage ceremony", 3),
+    ("Funeral", "Funeral or memorial service", 4),
+    ("Membership Started", "Became a church member", 5),
+    ("Transfer", "Transferred from another church", 6),
+    ("Child Dedication", "Child dedication ceremony", 7),
+    ("Profession of Faith", "Public profession of faith", 8),
+    ("Other", "Other significant life event", 99),
+]
+
+
+def _seed_event_types():
+    existing = {et.name for et in EventType.query.all()}
+    added = 0
+    for name, description, sort_order in DEFAULT_EVENT_TYPES:
+        if name not in existing:
+            db.session.add(EventType(name=name, description=description, sort_order=sort_order))
+            added += 1
+    if added:
+        db.session.commit()
+        click.echo(f"Created {added} event types.")
+    else:
+        click.echo("Event types already exist, skipping.")
+
+
+DEFAULT_APP_SETTINGS = [
+    ("timezone", "America/Chicago", True),
+    ("default_calendar_view", "month", True),
+    ("default_page_size", "20", True),
+]
+
+
+def _seed_app_settings():
+    existing = {s.key for s in AppSetting.query.all()}
+    added = 0
+    for key, value, is_public in DEFAULT_APP_SETTINGS:
+        if key not in existing:
+            db.session.add(AppSetting(key=key, value=value, is_public=is_public))
+            added += 1
+    if added:
+        db.session.commit()
+        click.echo(f"Created {added} app settings.")
+    else:
+        click.echo("App settings already exist, skipping.")
 
 
 def _seed_organization():

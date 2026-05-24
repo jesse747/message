@@ -4,7 +4,7 @@ from flask import abort, g, request
 from flask_jwt_extended import get_jwt_identity
 
 from .extensions import db
-from .models import GroupMember, Person, PersonTeam, Team, User
+from .models import GroupMember, Person, Team, User
 
 
 def _current_user():

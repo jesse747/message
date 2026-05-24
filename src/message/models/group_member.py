@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -10,7 +10,7 @@ class GroupMember(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey("groups.id"), nullable=False)
     person_id = db.Column(db.Integer, db.ForeignKey("persons.id"), nullable=False)
     role = db.Column(db.String(10), default="member")
-    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     group = db.relationship("Group", back_populates="members")
     person = db.relationship("Person")

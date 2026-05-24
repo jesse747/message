@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from ...email import send_invite_email
 from ...extensions import db
 from ...models import AuthAttempt, InviteToken, Person, User
 
@@ -94,6 +95,8 @@ def create_invite():
     )
     db.session.add(invite)
     db.session.commit()
+
+    send_invite_email(invite)
 
     return {
         "data": {

@@ -3,8 +3,7 @@ from datetime import datetime
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 
-from ...extensions import db
-from ...models import CalendarEvent, Meeting, Person
+from ...models import CalendarEvent, CalendarOverride, Meeting, MeetingInstance, Person
 
 bp = Blueprint("calendar", __name__)
 
@@ -22,10 +21,10 @@ def _compute_easter(year):
     h = (19 * a + b - d - g + 15) % 30
     i = c // 4
     k = c % 4
-    l = (32 + 2 * e + 2 * i - h - k) % 7
-    m = (a + 11 * h + 22 * l) // 451
-    month = (h + l - 7 * m + 114) // 31
-    day = (h + l - 7 * m + 114) % 31 + 1
+    lunar = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * lunar) // 451
+    month = (h + lunar - 7 * m + 114) // 31
+    day = (h + lunar - 7 * m + 114) % 31 + 1
     return datetime(year, month, day).date()
 
 
@@ -57,6 +56,11 @@ def _sunday_on_or_before(year, month, day):
 
 
 def _resolve_event_dates(event, from_date, to_date):
+    if event.frequency == "none" and event.first_date:
+        if from_date <= event.first_date <= to_date:
+            return [event.first_date]
+        return []
+
     start_year = from_date.year
     end_year = to_date.year
     dates = []
@@ -76,7 +80,8 @@ def _resolve_event_dates(event, from_date, to_date):
             if from_date <= d <= to_date:
                 dates.append(d)
 
-        elif event.frequency == "nth_weekday" and event.nth and event.weekday is not None and event.nth_month:
+        elif event.frequency == "nth_weekday" and event.nth and event.weekday is not None \
+                and event.nth_month:
             d = _nth_weekday(year, event.nth_month, event.nth, event.weekday)
             if d and from_date <= d <= to_date:
                 dates.append(d)
@@ -113,45 +118,93 @@ def get_calendar():
     # Calendar events
     if "events" in wanted:
         events = CalendarEvent.query.filter(
-            CalendarEvent.frequency != "none",
             (
-                CalendarEvent.last_date.is_(None)
-                | (CalendarEvent.last_date >= from_date)
+                (CalendarEvent.frequency != "none")
+                & (
+                    CalendarEvent.first_date.is_(None)
+                    | (CalendarEvent.first_date <= to_date)
+                )
+                & (
+                    CalendarEvent.last_date.is_(None)
+                    | (CalendarEvent.last_date >= from_date)
+                )
+            )
+            | (
+                (CalendarEvent.frequency == "none")
+                & (CalendarEvent.first_date >= from_date)
+                & (CalendarEvent.first_date <= to_date)
             ),
         ).all()
 
+        event_ids = [e.id for e in events]
+        overrides_lookup = {}
+        if event_ids:
+            overrides = CalendarOverride.query.filter(
+                CalendarOverride.event_id.in_(event_ids),
+                CalendarOverride.date >= from_date,
+                CalendarOverride.date <= to_date,
+            ).all()
+            for ov in overrides:
+                overrides_lookup[(ov.event_id, ov.date)] = ov
+
         for event in events:
             for d in _resolve_event_dates(event, from_date, to_date):
+                override = overrides_lookup.get((event.id, d))
+                if override and override.is_cancelled:
+                    continue
                 items.append({
                     "type": "event",
                     "id": event.id,
-                    "title": event.title,
+                    "title": (
+                        override.override_title
+                        if (override and override.override_title)
+                        else event.title
+                    ),
                     "date": d.isoformat(),
-                    "time": None,
-                    "location": event.location,
-                    "color": event.color,
+                    "time": str(event.start_time) if event.start_time else None,
+                    "end_time": str(event.end_time) if event.end_time else None,
+                    "location": (
+                        override.override_location
+                        if (override and override.override_location)
+                        else event.location
+                    ),
+                    "color": (
+                        override.override_color
+                        if (override and override.override_color)
+                        else event.color
+                    ),
                     "all_day": event.is_all_day,
+                    "has_override": override is not None,
                 })
 
     # Meetings
     if "meetings" in wanted:
-        meetings = Meeting.query.filter_by(is_active=True).all()
-        current = from_date
-        while current <= to_date:
-            for m in meetings:
-                if current.weekday() == m.day_of_week:
-                    items.append({
-                        "type": "meeting",
-                        "id": m.id,
-                        "title": m.name,
-                        "date": current.isoformat(),
-                        "time": str(m.time) if m.time else None,
-                        "location": m.location,
-                        "frequency": m.frequency,
-                        "team_id": m.team_id,
-                        "group_id": m.group_id,
-                    })
-            current += __import__("datetime").timedelta(days=1)
+        instances = (
+            MeetingInstance.query
+            .join(Meeting)
+            .filter(
+                Meeting.is_active.is_(True),
+                MeetingInstance.date >= from_date,
+                MeetingInstance.date <= to_date,
+            )
+            .order_by(MeetingInstance.date, MeetingInstance.time)
+            .all()
+        )
+        for inst in instances:
+            if inst.cancelled:
+                continue
+            items.append({
+                "type": "meeting",
+                "id": inst.meeting_id,
+                "title": inst.meeting.name,
+                "date": str(inst.date),
+                "time": str(inst.time) if inst.time else None,
+                "location": inst.location or inst.meeting.location,
+                "frequency": inst.meeting.frequency,
+                "team_id": inst.meeting.team_id,
+                "group_id": inst.meeting.group_id,
+                "cancellation_message": inst.cancellation_message,
+            })
 
     # Birthdays
     if "birthdays" in wanted:
@@ -171,4 +224,9 @@ def get_calendar():
                     pass
 
     items.sort(key=lambda x: (x["date"], x.get("time") or ""))
-    return {"data": items}, 200
+    limit = min(request.args.get("limit", 200, type=int), 500)
+    has_more = len(items) > limit
+    return {
+        "data": items[:limit],
+        "meta": {"has_more": has_more, "total": len(items)},
+    }, 200

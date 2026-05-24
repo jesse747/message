@@ -1,10 +1,9 @@
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import Blueprint, abort, current_app, request, send_from_directory
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from ...authz import require_capability, require_super_admin
 from ...extensions import db
@@ -49,7 +48,10 @@ def _family_with_members(family):
                 "last_name": m.last_name,
                 "role": "head" if m.id == head_id else "member",
             }
-            for m in sorted(family.members, key=lambda p: (0 if p.id == head_id else 1, p.last_name, p.first_name))
+            for m in sorted(
+                family.members,
+                key=lambda p: (0 if p.id == head_id else 1, p.last_name, p.first_name),
+            )
         ],
         "created_at": family.created_at.isoformat() if family.created_at else None,
         "updated_at": family.updated_at.isoformat() if family.updated_at else None,
@@ -72,7 +74,12 @@ def list_families():
 
     return {
         "data": [_family_detail(f) for f in families],
-        "meta": {"page": page, "limit": limit, "total": total, "pages": (total + limit - 1) // limit if total else 0},
+        "meta": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "pages": (total + limit - 1) // limit if total else 0,
+        },
     }, 200
 
 
@@ -177,7 +184,12 @@ def upload_family_photo(id):
     family = db.session.get(Family, id) or abort(404)
 
     if not request.content_type or "multipart/form-data" not in request.content_type:
-        return {"error": {"code": "UNSUPPORTED_MEDIA_TYPE", "message": "multipart/form-data required"}}, 415
+        return {
+            "error": {
+                "code": "UNSUPPORTED_MEDIA_TYPE",
+                "message": "multipart/form-data required",
+            }
+        }, 415
 
     f = request.files.get("file")
     if not f or not f.filename:
@@ -196,7 +208,7 @@ def upload_family_photo(id):
         type=f.content_type or "application/octet-stream",
         size=os.path.getsize(os.path.join(upload_dir, storage_name)),
         uploaded_by=user_id,
-        uploaded_at=datetime.now(timezone.utc),
+        uploaded_at=datetime.now(UTC),
     )
     db.session.add(file_obj)
     db.session.flush()

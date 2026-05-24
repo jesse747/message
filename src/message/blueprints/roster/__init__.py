@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 
-from flask import Blueprint, request, abort
+from flask import Blueprint, abort, request
 from flask_jwt_extended import jwt_required
 
 from ...extensions import db
-from ...models import Duty, DutyAssignment, DutyGroup, DutyGroupMembership, Person
+from ...models import Duty, DutyAssignment, DutyGroup, DutyGroupMembership
 
 bp = Blueprint("roster", __name__)
 
@@ -17,13 +17,22 @@ def get_roster():
     date_to = request.args.get("date_to")
 
     if not group_id or not date_from or not date_to:
-        return {"error": {"code": "BAD_REQUEST", "message": "group_id, date_from, and date_to required"}}, 400
+        return {
+            "error": {
+                "code": "BAD_REQUEST",
+                "message": "group_id, date_from, and date_to required",
+            }
+        }, 400
 
     group = db.session.get(DutyGroup, group_id) or abort(404)
     from_date = datetime.strptime(date_from, "%Y-%m-%d").date()
     to_date = datetime.strptime(date_to, "%Y-%m-%d").date()
 
-    duties = Duty.query.filter_by(duty_group_id=group_id, is_active=True).order_by(Duty.sort_order).all()
+    duties = (
+        Duty.query.filter_by(duty_group_id=group_id, is_active=True)
+        .order_by(Duty.sort_order)
+        .all()
+    )
     memberships = DutyGroupMembership.query.filter_by(duty_group_id=group_id).filter(
         DutyGroupMembership.date_from <= to_date,
         (DutyGroupMembership.date_to.is_(None)) | (DutyGroupMembership.date_to >= from_date),

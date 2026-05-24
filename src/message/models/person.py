@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -22,25 +22,22 @@ class Person(db.Model):
     membership_status = db.Column(
         db.String(20), default="member"
     )
-    membership_start_date = db.Column(db.Date, nullable=True)
     membership_type = db.Column(db.String(20), nullable=True)
     membership_number = db.Column(db.String(50), unique=True, nullable=True)
-    date_joined = db.Column(db.Date, nullable=True)
-    baptism_date = db.Column(db.Date, nullable=True)
-    baptism_location = db.Column(db.String(100), nullable=True)
-    transferred_from = db.Column(db.String(100), nullable=True)
     membership_notes = db.Column(db.Text, nullable=True)
 
     date_of_birth = db.Column(db.Date, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     family_id = db.Column(db.Integer, db.ForeignKey("families.id"), nullable=True)
-    photo_file_id = db.Column(db.Integer, db.ForeignKey("files.id", ondelete="SET NULL"), nullable=True)
+    photo_file_id = db.Column(
+        db.Integer, db.ForeignKey("files.id", ondelete="SET NULL"), nullable=True
+    )
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     user = db.relationship("User", back_populates="person", uselist=False, foreign_keys=[user_id])
@@ -59,7 +56,12 @@ class Person(db.Model):
         back_populates="person_2",
         cascade="all, delete-orphan",
     )
-    flock_memberships = db.relationship("FlockMember", back_populates="person", cascade="all, delete-orphan")
+    flock_memberships = db.relationship(
+        "FlockMember", back_populates="person", cascade="all, delete-orphan"
+    )
+    events = db.relationship(
+        "PersonEvent", back_populates="person", cascade="all, delete-orphan"
+    )
 
     @property
     def full_name(self):

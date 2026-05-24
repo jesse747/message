@@ -5,7 +5,10 @@ class TestCalendar:
             headers=auth_headers,
         )
         assert r.status_code == 200
-        assert "data" in r.get_json()
+        body = r.get_json()
+        assert "data" in body
+        assert "meta" in body
+        assert "has_more" in body["meta"]
 
     def test_calendar_missing_params(self, client, db, auth_headers):
         r = client.get("/api/v1/calendar", headers=auth_headers)

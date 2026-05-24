@@ -12,6 +12,7 @@ class FlockSchema(ma.SQLAlchemyAutoSchema):
         exclude = ["created_at", "updated_at", "created_by"]
 
     name = fields.String(required=True, validate=validate.Length(min=1, max=100))
+    shepherd_id = fields.Integer(allow_none=True)
 
 
 class FlockMemberSchema(ma.SQLAlchemyAutoSchema):
@@ -21,14 +22,4 @@ class FlockMemberSchema(ma.SQLAlchemyAutoSchema):
         include_fk = True
         exclude = ["created_at", "flock_id"]
 
-    role = fields.String(validate=validate.OneOf(["shepherd", "assistant", "member"]))
-
-
-class FlockMemberUpdateSchema(ma.SQLAlchemySchema):
-    class Meta:
-        model = FlockMember
-        load_instance = False
-        partial = True
-
-    role = fields.String(required=True, validate=validate.OneOf(["shepherd", "assistant", "member"]))
-    notes = fields.String(allow_none=True)
+    person_id = fields.Integer(required=True)

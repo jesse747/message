@@ -18,8 +18,8 @@ class PersonSchema(ma.SQLAlchemyAutoSchema):
     membership_status = fields.String(
         validate=validate.OneOf(["member", "visitor", "inactive", "former"])
     )
-    membership_type = fields.String(validate=validate.OneOf(["regular", "associate", "honorary"]), allow_none=True)
+    membership_type = fields.String(
+        validate=validate.OneOf(["regular", "associate", "honorary"]),
+        allow_none=True,
+    )
     date_of_birth = fields.Date(allow_none=True)
-    date_joined = fields.Date(allow_none=True)
-    baptism_date = fields.Date(allow_none=True)
-    membership_start_date = fields.Date(allow_none=True)

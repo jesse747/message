@@ -107,7 +107,13 @@ def add_contact():
     try:
         data = contact_schema.load(request.get_json())
     except MarshmallowError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            }
+        }, 422
 
     person = db.session.get(Person, data["person_id"])
     if not person:
@@ -115,7 +121,12 @@ def add_contact():
 
     existing = OrganizationContact.query.filter_by(person_id=data["person_id"]).first()
     if existing:
-        return {"error": {"code": "CONFLICT", "message": "Person is already a designated contact"}}, 409
+        return {
+            "error": {
+                "code": "CONFLICT",
+                "message": "Person is already a designated contact",
+            }
+        }, 409
 
     contact = OrganizationContact(
         person_id=data["person_id"],

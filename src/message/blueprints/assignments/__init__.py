@@ -1,10 +1,10 @@
-from flask import Blueprint, request, abort
+from flask import Blueprint, abort, request
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 
 from ...authz import require_capability
 from ...extensions import db
-from ...models import DutyAssignment, DutyGroupMembership, Duty
+from ...models import DutyAssignment
 from ...schemas.roster import SwapSchema
 
 bp = Blueprint("assignments", __name__)
@@ -18,7 +18,13 @@ def swap_assignments():
     try:
         data = swap_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            }
+        }, 422
 
     date = data["date"]
     changes = data["changes"]
@@ -31,7 +37,10 @@ def swap_assignments():
             return {
                 "error": {
                     "code": "NOT_FOUND",
-                    "message": f"No assignment for duty {change['duty_id']} person {change['from_person_id']} on {date}",
+                    "message": (
+                        f"No assignment for duty {change['duty_id']} "
+                        f"person {change['from_person_id']} on {date}"
+                    ),
                 }
             }, 404
 
@@ -45,7 +54,10 @@ def swap_assignments():
             return {
                 "error": {
                     "code": "CONFLICT",
-                    "message": f"Person {change['to_person_id']} is already assigned to duty {change['duty_id']} on {date}",
+                    "message": (
+                        f"Person {change['to_person_id']} is already assigned "
+                        f"to duty {change['duty_id']} on {date}"
+                    ),
                 }
             }, 409
 

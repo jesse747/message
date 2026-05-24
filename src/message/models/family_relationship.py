@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -12,10 +12,17 @@ class FamilyRelationship(db.Model):
     person_1_id = db.Column(db.Integer, db.ForeignKey("persons.id"), nullable=False)
     person_2_id = db.Column(db.Integer, db.ForeignKey("persons.id"), nullable=False)
     relationship_type = db.Column(db.String(20), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
-    person_1 = db.relationship("Person", foreign_keys=[person_1_id], back_populates="relationships_as_1")
-    person_2 = db.relationship("Person", foreign_keys=[person_2_id], back_populates="relationships_as_2")
+    person_1 = db.relationship(
+        "Person", foreign_keys=[person_1_id], back_populates="relationships_as_1"
+    )
+    person_2 = db.relationship(
+        "Person", foreign_keys=[person_2_id], back_populates="relationships_as_2"
+    )
 
     def __repr__(self):
-        return f"<FamilyRelationship {self.person_1_id} {self.relationship_type} {self.person_2_id}>"
+        return (
+            f"<FamilyRelationship {self.person_1_id}"
+            f" {self.relationship_type} {self.person_2_id}>"
+        )

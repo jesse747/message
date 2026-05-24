@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -13,7 +13,7 @@ class OrganizationContact(db.Model):
     role = db.Column(db.String(50), nullable=True)
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(
-        db.DateTime, default=lambda: datetime.now(timezone.utc)
+        db.DateTime, default=lambda: datetime.now(UTC)
     )
 
     person = db.relationship("Person")

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func
 
@@ -14,15 +14,23 @@ class DutyGroup(db.Model):
     day_of_week = db.Column(db.Integer, nullable=False)
     time = db.Column(db.Time, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     duties = db.relationship("Duty", back_populates="duty_group", cascade="all, delete-orphan")
-    memberships = db.relationship("DutyGroupMembership", back_populates="duty_group", cascade="all, delete-orphan")
+    memberships = db.relationship(
+        "DutyGroupMembership", back_populates="duty_group", cascade="all, delete-orphan"
+    )
+    posts = db.relationship(
+        "Post",
+        foreign_keys="Post.duty_group_id",
+        back_populates="duty_group",
+        cascade="all, delete-orphan",
+    )
 
     def generate_assignments(self, from_date, to_date):
         from .duty_assignment import DutyAssignment

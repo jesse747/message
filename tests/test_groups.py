@@ -1,6 +1,7 @@
 import io
 
 from flask_jwt_extended import create_access_token
+
 from tests.helpers import create_user
 
 
@@ -47,7 +48,7 @@ class TestUpdateGroup:
         intruder_headers = {"Authorization": f"Bearer {intruder_token}"}
         r = client.post("/api/v1/groups", json={"name": "Private Group"}, headers=owner_headers)
         group_id = r.get_json()["data"]["id"]
-        r = c.patch(f"/api/v1/groups/{group_id}", json={"description": "Hack"}, headers=intruder_headers)
+        r = client.patch(f"/api/v1/groups/{group_id}", json={"description": "Hack"}, headers=intruder_headers)
         assert r.status_code == 403
 
 

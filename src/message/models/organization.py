@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -13,7 +13,7 @@ class Organization(db.Model):
     phone = db.Column(db.String(30), nullable=True)
     address = db.Column(db.Text, nullable=True)
     website = db.Column(db.String(200), nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     def __repr__(self):
         return f"<Organization {self.name}>"

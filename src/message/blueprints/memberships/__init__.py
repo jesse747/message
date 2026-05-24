@@ -25,8 +25,7 @@ def get_membership(id):
 @bp.route("/<int:id>", methods=["DELETE"])
 @jwt_required()
 def delete_membership(id):
-    from ...authz import require_capability, _current_user
-    from ...models import User
+    from ...authz import _current_user
 
     m = db.session.get(DutyGroupMembership, id) or abort(404)
     user = _current_user()

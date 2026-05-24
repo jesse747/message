@@ -45,7 +45,11 @@ def log_error(status, message):
 
 def generic_handler(error):
     status = getattr(error, "code", 500) if isinstance(error, HTTPException) else 500
-    message = getattr(error, "description", str(error)) if isinstance(error, HTTPException) else "Internal server error"
+    message = (
+        getattr(error, "description", str(error))
+        if isinstance(error, HTTPException)
+        else "Internal server error"
+    )
     code = CODE_MAP.get(status, "INTERNAL_ERROR")
 
     log_error(status, message)

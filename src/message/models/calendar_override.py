@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -14,7 +14,7 @@ class CalendarOverride(db.Model):
     override_location = db.Column(db.String(200), nullable=True)
     override_color = db.Column(db.String(7), nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     event = db.relationship("CalendarEvent", back_populates="overrides")
 

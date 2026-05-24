@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -13,7 +13,7 @@ class AuthAttempt(db.Model):
     user_agent = db.Column(db.String(500), nullable=True)
     outcome = db.Column(db.String(10), nullable=False)
     failure_reason = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     def __repr__(self):
         return f"<AuthAttempt {self.username_attempted} {self.outcome}>"

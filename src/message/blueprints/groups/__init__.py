@@ -1,15 +1,20 @@
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import Blueprint, abort, current_app, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from marshmallow import ValidationError
 
 from ...authz import require_group_admin
 from ...extensions import db
 from ...models import File, Group, GroupMember, Meeting, MeetingInstance, Person, Post, User
-from ...schemas.group import GroupSchema, GroupUpdateSchema, GroupMemberSchema, GroupMemberUpdateSchema
+from ...schemas.group import (
+    GroupMemberSchema,
+    GroupMemberUpdateSchema,
+    GroupSchema,
+    GroupUpdateSchema,
+)
 from ...schemas.meeting import MeetingSchema
 from ...schemas.meeting_instance import MeetingInstanceSchema, MeetingInstanceUpdateSchema
 
@@ -50,7 +55,13 @@ def create_group():
     try:
         data = group_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            },
+        }, 422
 
     group = Group(**data)
     group.created_by = int(get_jwt_identity())
@@ -64,7 +75,14 @@ def create_group():
         db.session.add(gm)
 
     db.session.commit()
-    return {"data": {"id": group.id, "name": group.name, "description": group.description, "is_public": group.is_public}}, 201
+    return {
+        "data": {
+            "id": group.id,
+            "name": group.name,
+            "description": group.description,
+            "is_public": group.is_public,
+        },
+    }, 201
 
 
 @bp.route("/<int:id>")
@@ -114,7 +132,12 @@ def join_group(id):
     user_id = int(get_jwt_identity())
     person = Person.query.filter_by(user_id=user_id).first()
     if not person:
-        return {"error": {"code": "BAD_REQUEST", "message": "No person record linked to your account"}}, 400
+        return {
+            "error": {
+                "code": "BAD_REQUEST",
+                "message": "No person record linked to your account",
+            },
+        }, 400
 
     if GroupMember.query.filter_by(group_id=id, person_id=person.id).first():
         return {"error": {"code": "CONFLICT", "message": "Already a member of this group"}}, 409
@@ -133,7 +156,12 @@ def leave_group(id):
     user_id = int(get_jwt_identity())
     person = Person.query.filter_by(user_id=user_id).first()
     if not person:
-        return {"error": {"code": "BAD_REQUEST", "message": "No person record linked to your account"}}, 400
+        return {
+            "error": {
+                "code": "BAD_REQUEST",
+                "message": "No person record linked to your account",
+            },
+        }, 400
 
     gm = GroupMember.query.filter_by(group_id=id, person_id=person.id).first()
     if not gm:
@@ -152,7 +180,13 @@ def update_group(id):
     try:
         data = group_update_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            },
+        }, 422
 
     for key, val in data.items():
         setattr(group, key, val)
@@ -197,7 +231,13 @@ def add_member(id):
     try:
         data = member_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            },
+        }, 422
 
     db.session.get(Person, data["person_id"]) or abort(404)
     if GroupMember.query.filter_by(group_id=id, person_id=data["person_id"]).first():
@@ -217,7 +257,13 @@ def update_member(id, person_id):
     try:
         data = member_update_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            },
+        }, 422
 
     gm.role = data["role"]
     db.session.commit()
@@ -241,7 +287,12 @@ def remove_member(id, person_id):
 @jwt_required()
 def list_group_meetings(group_id):
     db.session.get(Group, group_id) or abort(404)
-    meetings = Meeting.query.filter_by(group_id=group_id).order_by(Meeting.day_of_week, Meeting.time).all()
+    meetings = (
+        Meeting.query
+        .filter_by(group_id=group_id)
+        .order_by(Meeting.day_of_week, Meeting.time)
+        .all()
+    )
     return {
         "data": [
             {
@@ -264,7 +315,13 @@ def create_group_meeting(group_id):
     try:
         data = MeetingSchema().load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            },
+        }, 422
 
     data.pop("group_id", None)
     data.pop("team_id", None)
@@ -318,7 +375,7 @@ def _instance_detail(i):
 
 @bp.route("/<int:group_id>/meetings/<int:mid>/instances")
 @jwt_required()
-def list_meeting_instances(group_id, mid):
+def list_meeting_instances(group_id, mid):  # noqa: ARG001
     db.session.get(Meeting, mid) or abort(404)
     instances = MeetingInstance.query.filter_by(meeting_id=mid).order_by(MeetingInstance.date).all()
     return {"data": [_instance_detail(i) for i in instances]}, 200
@@ -327,7 +384,7 @@ def list_meeting_instances(group_id, mid):
 @bp.route("/<int:group_id>/meetings/<int:mid>/instances", methods=["POST"])
 @jwt_required()
 @require_group_admin
-def create_meeting_instance(group_id, mid):
+def create_meeting_instance(group_id, mid):  # noqa: ARG001
     meeting = db.session.get(Meeting, mid) or abort(404)
     body = request.get_json(silent=True) or {}
 
@@ -342,7 +399,13 @@ def create_meeting_instance(group_id, mid):
     try:
         data = instance_schema.load(body)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            },
+        }, 422
 
     data.pop("meeting_id", None)
     inst = MeetingInstance(**data, meeting_id=mid)
@@ -362,7 +425,13 @@ def update_meeting_instance(group_id, mid, iid):
     try:
         data = instance_update_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            },
+        }, 422
 
     cancelled = data.pop("cancelled", None)
     cancellation_message = data.pop("cancellation_message", None)
@@ -391,7 +460,7 @@ def update_meeting_instance(group_id, mid, iid):
 @bp.route("/<int:group_id>/meetings/<int:mid>/instances/<int:iid>", methods=["DELETE"])
 @jwt_required()
 @require_group_admin
-def delete_meeting_instance(group_id, mid, iid):
+def delete_meeting_instance(group_id, mid, iid):  # noqa: ARG001
     inst = db.session.get(MeetingInstance, iid) or abort(404)
     if inst.meeting_id != mid:
         return {"error": {"code": "NOT_FOUND", "message": "Instance not found"}}, 404
@@ -402,7 +471,7 @@ def delete_meeting_instance(group_id, mid, iid):
 
 @bp.route("/<int:group_id>/meetings/<int:mid>/instances/<int:iid>/files")
 @jwt_required()
-def list_instance_files(group_id, mid, iid):
+def list_instance_files(group_id, mid, iid):  # noqa: ARG001
     db.session.get(MeetingInstance, iid) or abort(404)
     files = File.query.filter_by(meeting_instance_id=iid).order_by(File.uploaded_at.desc()).all()
     return {
@@ -424,10 +493,15 @@ def list_instance_files(group_id, mid, iid):
 @bp.route("/<int:group_id>/meetings/<int:mid>/instances/<int:iid>/files", methods=["POST"])
 @jwt_required()
 @require_group_admin
-def upload_instance_file(group_id, mid, iid):
+def upload_instance_file(group_id, mid, iid):  # noqa: ARG001
     db.session.get(MeetingInstance, iid) or abort(404)
     if not request.content_type or "multipart/form-data" not in request.content_type:
-        return {"error": {"code": "UNSUPPORTED_MEDIA_TYPE", "message": "multipart/form-data required"}}, 415
+        return {
+            "error": {
+                "code": "UNSUPPORTED_MEDIA_TYPE",
+                "message": "multipart/form-data required",
+            },
+        }, 415
 
     files = request.files.getlist("file") or [request.files.get("file")]
     files = [f for f in files if f and f.filename]
@@ -450,7 +524,7 @@ def upload_instance_file(group_id, mid, iid):
             size=os.path.getsize(os.path.join(upload_dir, storage_name)),
             meeting_instance_id=iid,
             uploaded_by=user_id,
-            uploaded_at=datetime.now(timezone.utc),
+            uploaded_at=datetime.now(UTC),
         )
         db.session.add(file_obj)
         saved.append(file_obj)
@@ -470,10 +544,13 @@ def upload_instance_file(group_id, mid, iid):
     }, 201
 
 
-@bp.route("/<int:group_id>/meetings/<int:mid>/instances/<int:iid>/files/<int:fid>", methods=["DELETE"])
+@bp.route(
+    "/<int:group_id>/meetings/<int:mid>/instances/<int:iid>/files/<int:fid>",
+    methods=["DELETE"],
+)
 @jwt_required()
 @require_group_admin
-def delete_instance_file(group_id, mid, iid, fid):
+def delete_instance_file(group_id, mid, iid, fid):  # noqa: ARG001
     file_obj = db.session.get(File, fid) or abort(404)
     if file_obj.meeting_instance_id != iid:
         return {"error": {"code": "NOT_FOUND", "message": "File not found"}}, 404
@@ -509,12 +586,20 @@ def list_group_files(group_id):
                 "type": f.type,
                 "size_kb": round(f.size / 1024, 1),
                 "url": f"/api/v1/files/{f.id}",
-                "uploaded_by": {"id": f.uploaded_by, "name": f.uploader.display_name if f.uploader else None},
+                "uploaded_by": {
+                    "id": f.uploaded_by,
+                    "name": f.uploader.display_name if f.uploader else None,
+                },
                 "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
             }
             for f in files
         ],
-        "meta": {"page": page, "limit": limit, "total": total, "pages": (total + limit - 1) // limit if total else 0},
+        "meta": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "pages": (total + limit - 1) // limit if total else 0,
+        },
     }, 200
 
 
@@ -522,7 +607,12 @@ def list_group_files(group_id):
 @jwt_required()
 def upload_group_file(group_id):
     if not request.content_type or "multipart/form-data" not in request.content_type:
-        return {"error": {"code": "UNSUPPORTED_MEDIA_TYPE", "message": "multipart/form-data required"}}, 415
+        return {
+            "error": {
+                "code": "UNSUPPORTED_MEDIA_TYPE",
+                "message": "multipart/form-data required",
+            },
+        }, 415
 
     files = request.files.getlist("file") or [request.files.get("file")]
     files = [f for f in files if f and f.filename]
@@ -532,7 +622,12 @@ def upload_group_file(group_id):
 
     user_id = int(get_jwt_identity())
     person = Person.query.filter_by(user_id=user_id).first()
-    is_member = person and GroupMember.query.filter_by(group_id=group_id, person_id=person.id).first()
+    is_member = (
+        person
+        and GroupMember.query.filter_by(
+            group_id=group_id, person_id=person.id
+        ).first()
+    )
     if not is_member:
         user = db.session.get(User, user_id)
         if not (user and user.is_super_admin):
@@ -553,7 +648,7 @@ def upload_group_file(group_id):
             size=os.path.getsize(os.path.join(upload_dir, storage_name)),
             group_id=group_id,
             uploaded_by=user_id,
-            uploaded_at=datetime.now(timezone.utc),
+            uploaded_at=datetime.now(UTC),
         )
         db.session.add(file_obj)
         saved.append(file_obj)
@@ -589,13 +684,21 @@ def list_group_posts(group_id):
             {
                 "id": p.id,
                 "content": p.content,
-                "author": {"id": p.author_id, "display_name": p.author.display_name if p.author else None},
+                "author": {
+                    "id": p.author_id,
+                    "display_name": p.author.display_name if p.author else None,
+                },
                 "files": [{"id": f.id, "name": f.name, "type": f.type} for f in (p.files or [])],
                 "created_at": p.created_at.isoformat() if p.created_at else None,
             }
             for p in posts
         ],
-        "meta": {"page": page, "limit": limit, "total": total, "pages": (total + limit - 1) // limit if total else 0},
+        "meta": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "pages": (total + limit - 1) // limit if total else 0,
+        },
     }, 200
 
 
@@ -606,7 +709,16 @@ def create_group_post(group_id):
     user = db.session.get(User, user_id)
     person = Person.query.filter_by(user_id=user_id).first()
 
-    if not (user.is_super_admin or GroupMember.query.filter_by(group_id=group_id, person_id=person.id).first() if person else False):
+    if not (
+        user.is_super_admin
+        or (
+            GroupMember.query.filter_by(
+                group_id=group_id, person_id=person.id
+            ).first()
+            if person
+            else False
+        )
+    ):
         return {"error": {"code": "FORBIDDEN", "message": "Not a member of this group"}}, 403
 
     data = request.get_json(silent=True) or {}
@@ -614,14 +726,22 @@ def create_group_post(group_id):
     if not content:
         return {"error": {"code": "BAD_REQUEST", "message": "content required"}}, 400
 
-    post = Post(content=content, group_id=group_id, author_id=user_id)
+    post = Post(
+        content=content,
+        group_id=group_id,
+        author_id=user_id,
+        show_on_bulletin=data.get("show_on_bulletin", False),
+    )
     db.session.add(post)
     db.session.commit()
     return {
         "data": {
             "id": post.id,
             "content": post.content,
-            "author": {"id": post.author_id, "display_name": post.author.display_name if post.author else None},
+            "author": {
+                "id": post.author_id,
+                "display_name": post.author.display_name if post.author else None,
+            },
             "created_at": post.created_at.isoformat() if post.created_at else None,
         }
     }, 201

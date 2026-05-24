@@ -27,8 +27,24 @@ class Config:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_FORMAT = os.getenv("LOG_FORMAT", "text")
 
+    COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+
     SLOW_QUERY_THRESHOLD_MS = int(os.getenv("SLOW_QUERY_THRESHOLD_MS", "500"))
     ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "true").lower() == "true"
+
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "localhost")
+    MAIL_PORT = int(os.getenv("MAIL_PORT", "25"))
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "false").lower() == "true"
+    MAIL_USE_SSL = os.getenv("MAIL_USE_SSL", "false").lower() == "true"
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME", None)
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", None)
+    MAIL_DEFAULT_SENDER = (
+        os.getenv("APP_NAME", "Message"),
+        os.getenv("MAIL_DEFAULT_SENDER", "noreply@example.com"),
+    )
+    MAIL_SUPPRESS_SEND = os.getenv("MAIL_SUPPRESS_SEND", "false").lower() == "true"
+    MAIL_DEBUG = os.getenv("MAIL_DEBUG", "false").lower() == "true"
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 class DevConfig(Config):
@@ -41,11 +57,15 @@ class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     LOG_LEVEL = "CRITICAL"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    RATELIMIT_ENABLED = False
+    MAIL_SUPPRESS_SEND = True
 
 
 class ProdConfig(Config):
     LOG_FORMAT = "json"
 
+    PREFERRED_URL_SCHEME = "https"
+    COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_SAMESITE = "Lax"
 

@@ -12,7 +12,7 @@ class TextFormatter(logging.Formatter):
         record.request_id = getattr(record, "request_id", "-")
         return super().format(record)
 
-    def formatTime(self, record, datefmt=None):
+    def formatTime(self, record, _datefmt=None):  # noqa: N802
         return super().formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S")
 
 
@@ -62,11 +62,11 @@ def _install_slow_query_listener(app):
     db_logger = logging.getLogger("message.db")
 
     @event.listens_for(__import__("sqlalchemy").engine.Engine, "before_cursor_execute")
-    def before_query(conn, cursor, statement, parameters, context, executemany):
+    def before_query(conn, _cursor, _statement, _parameters, _context, _executemany):
         conn._query_start = time.perf_counter()
 
     @event.listens_for(__import__("sqlalchemy").engine.Engine, "after_cursor_execute")
-    def after_query(conn, cursor, statement, parameters, context, executemany):
+    def after_query(conn, _cursor, statement, _parameters, _context, _executemany):
         duration = (time.perf_counter() - conn._query_start) * 1000
         if duration > threshold:
             db_logger.warning(

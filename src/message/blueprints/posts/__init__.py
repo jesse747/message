@@ -1,9 +1,9 @@
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import Blueprint, abort, current_app, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from marshmallow import ValidationError
 
 from ...extensions import db
@@ -21,7 +21,12 @@ def _post_data(post):
         "content": post.content,
         "team_id": post.team_id,
         "group_id": post.group_id,
-        "author": {"id": post.author_id, "display_name": post.author.display_name if post.author else None},
+        "duty_group_id": post.duty_group_id,
+        "show_on_bulletin": post.show_on_bulletin,
+        "author": {
+            "id": post.author_id,
+            "display_name": post.author.display_name if post.author else None,
+        },
         "is_pinned": post.is_pinned,
         "expires_at": post.expires_at.isoformat() if post.expires_at else None,
         "files": [{"id": f.id, "name": f.name, "type": f.type} for f in (post.files or [])],
@@ -43,18 +48,36 @@ def list_posts():
     page = request.args.get("page", 1, type=int)
     limit = min(request.args.get("limit", 20, type=int), 100)
 
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    query = Post.query.filter(Post.team_id.is_(None), Post.group_id.is_(None))
+    query = Post.query.filter(
+        (
+            Post.team_id.is_(None)
+            & Post.group_id.is_(None)
+            & Post.duty_group_id.is_(None)
+            & Post.meeting_instance_id.is_(None)
+        )
+        | Post.show_on_bulletin.is_(True)
+    )
     if not show_expired:
-        query = query.filter((Post.expires_at.is_(None)) | (Post.expires_at > datetime.now(timezone.utc)))
+        query = query.filter((Post.expires_at.is_(None)) | (Post.expires_at > datetime.now(UTC)))
 
     total = query.count()
-    posts = query.order_by(Post.is_pinned.desc(), Post.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    posts = (
+        query.order_by(Post.is_pinned.desc(), Post.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
 
     return {
         "data": [_post_data(p) for p in posts],
-        "meta": {"page": page, "limit": limit, "total": total, "pages": (total + limit - 1) // limit if total else 0},
+        "meta": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "pages": (total + limit - 1) // limit if total else 0,
+        },
     }, 200
 
 
@@ -66,7 +89,13 @@ def create_post():
     try:
         data = post_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            }
+        }, 422
 
     post = Post(**data, author_id=user_id)
     db.session.add(post)
@@ -93,7 +122,13 @@ def update_post(id):
     try:
         data = post_update_schema.load(request.json)
     except ValidationError as e:
-        return {"error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": e.messages}}, 422
+        return {
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": e.messages,
+            }
+        }, 422
 
     for key, val in data.items():
         setattr(post, key, val)
@@ -120,7 +155,12 @@ def delete_post(id):
 def upload_post_file(post_id):
     db.session.get(Post, post_id) or abort(404)
     if not request.content_type or "multipart/form-data" not in request.content_type:
-        return {"error": {"code": "UNSUPPORTED_MEDIA_TYPE", "message": "multipart/form-data required"}}, 415
+        return {
+            "error": {
+                "code": "UNSUPPORTED_MEDIA_TYPE",
+                "message": "multipart/form-data required",
+            }
+        }, 415
 
     files = request.files.getlist("file") or [request.files.get("file")]
     files = [f for f in files if f and f.filename]
@@ -144,7 +184,7 @@ def upload_post_file(post_id):
             size=os.path.getsize(os.path.join(upload_dir, storage_name)),
             post_id=post_id,
             uploaded_by=user_id,
-            uploaded_at=datetime.now(timezone.utc),
+            uploaded_at=datetime.now(UTC),
         )
         db.session.add(file_obj)
         saved.append(file_obj)

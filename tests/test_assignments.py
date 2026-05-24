@@ -1,4 +1,3 @@
-import io
 
 
 class TestSwapAssignments:
