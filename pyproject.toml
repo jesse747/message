@@ -1,0 +1,52 @@
+[project]
+name = "message"
+version = "0.1.0"
+description = "Church management backend"
+requires-python = ">=3.13"
+dependencies = [
+    "flask>=3.1",
+    "flask-sqlalchemy>=3.1",
+    "flask-migrate>=4.1",
+    "flask-jwt-extended>=4.7",
+    "flask-cors>=5.0",
+    "flask-limiter>=3.10",
+    "marshmallow>=3.25",
+    "flask-marshmallow>=1.2",
+    "marshmallow-sqlalchemy>=1.2",
+    "python-dotenv>=1.1",
+    "gunicorn>=23.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-flask>=1.3",
+    "ruff>=0.11",
+    "mypy>=1.15",
+    "pre-commit>=4.2",
+]
+
+[project.scripts]
+message = "message:create_app"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "ARG"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.14"
+strict = false
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

@@ -1,0 +1,28 @@
+[Unit]
+Description=Message API (Gunicorn)
+After=network.target redis-server.service
+Wants=redis-server.service
+
+[Service]
+WorkingDirectory=/opt/message
+EnvironmentFile=/opt/message/.env
+ExecStart=/opt/message/venv/bin/gunicorn \
+    --workers 4 \
+    --worker-class gthread \
+    --threads 2 \
+    --bind unix:/run/message.sock \
+    --umask 007 \
+    --access-logfile /var/log/message/access.log \
+    --error-logfile /var/log/message/error.log \
+    --log-level info \
+    'src.message:create_app()'
+
+User=www-data
+Group=www-data
+RuntimeDirectory=message
+RuntimeDirectoryMode=0755
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
