@@ -24,7 +24,16 @@ def init_extensions(app):
     migrate.init_app(app, db)
     jwt.init_app(app)
     ma.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    frontend_url = app.config.get("FRONTEND_URL", "http://localhost:5173")
+    cors.init_app(
+        app,
+        resources={
+            r"/api/*": {
+                "origins": [frontend_url],
+                "supports_credentials": True,
+            }
+        },
+    )
     limiter.init_app(app)
     mail.init_app(app)
 
