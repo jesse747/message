@@ -95,7 +95,8 @@ def _token_response(user):
             "username": user.username,
             "display_name": user.display_name,
             "email": user.email,
-            "role": "admin" if user.is_super_admin or user.permissions else "member",
+            "role": "admin" if user.is_super_admin else "member",
+            "capabilities": _get_user_capabilities(user),
         },
         "access_token": access,
     }

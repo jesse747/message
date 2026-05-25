@@ -40,6 +40,11 @@ def _org_data(org):
         "email": org.email,
         "phone": org.phone,
         "address": org.address,
+        "address_street": org.address_street,
+        "address_city": org.address_city,
+        "address_region": org.address_region,
+        "address_postal_code": org.address_postal_code,
+        "address_country": org.address_country,
         "website": org.website,
         "contacts": [_contact_data(c) for c in contacts],
     }
@@ -58,6 +63,9 @@ def get_organization():
             "data": {
                 "id": None, "name": None, "description": None,
                 "email": None, "phone": None, "address": None,
+                "address_street": None, "address_city": None,
+                "address_region": None, "address_postal_code": None,
+                "address_country": None,
                 "website": None,
                 "contacts": [_contact_data(c) for c in contacts],
             }
@@ -78,11 +86,18 @@ def update_organization():
             email=data.get("email"),
             phone=data.get("phone"),
             address=data.get("address"),
+            address_street=data.get("address_street"),
+            address_city=data.get("address_city"),
+            address_region=data.get("address_region"),
+            address_postal_code=data.get("address_postal_code"),
+            address_country=data.get("address_country"),
             website=data.get("website"),
         )
         db.session.add(org)
     else:
-        for field in ("name", "description", "email", "phone", "address", "website"):
+        for field in ("name", "description", "email", "phone", "address",
+                       "address_street", "address_city", "address_region",
+                       "address_postal_code", "address_country", "website"):
             if field in data:
                 setattr(org, field, data[field])
     db.session.commit()

@@ -16,6 +16,11 @@ class Person(db.Model):
     phone_home = db.Column(db.String(30), nullable=True)
     phone_work = db.Column(db.String(30), nullable=True)
     address = db.Column(db.Text, nullable=True)
+    address_street = db.Column(db.String(200), nullable=True)
+    address_city = db.Column(db.String(100), nullable=True)
+    address_region = db.Column(db.String(100), nullable=True)
+    address_postal_code = db.Column(db.String(20), nullable=True)
+    address_country = db.Column(db.String(100), nullable=True)
     emergency_contact_name = db.Column(db.String(100), nullable=True)
     emergency_contact_phone = db.Column(db.String(30), nullable=True)
 

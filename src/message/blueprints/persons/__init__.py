@@ -29,8 +29,10 @@ person_event_update_schema = PersonEventUpdateSchema()
 
 CONTACT_FIELDS = {
     "email_personal", "email_work", "phone_mobile", "phone_home",
-    "phone_work", "address", "emergency_contact_name",
-    "emergency_contact_phone", "date_of_birth", "notes",
+    "phone_work", "address", "address_street", "address_city",
+    "address_region", "address_postal_code", "address_country",
+    "emergency_contact_name", "emergency_contact_phone",
+    "date_of_birth", "notes",
 }
 
 
@@ -45,7 +47,12 @@ def _person_detail(person):
         "phone_mobile": person.phone_mobile,
         "phone_home": person.phone_home,
         "phone_work": person.phone_work,
-        "address": person.address,
+	"address": person.address,
+        "address_street": person.address_street,
+        "address_city": person.address_city,
+        "address_region": person.address_region,
+        "address_postal_code": person.address_postal_code,
+        "address_country": person.address_country,
         "emergency_contact_name": person.emergency_contact_name,
         "emergency_contact_phone": person.emergency_contact_phone,
         "membership_status": person.membership_status,

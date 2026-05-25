@@ -34,7 +34,7 @@ def log_error(status, message):
         "request_error",
         extra={
             "status": status,
-            "message": message,
+            "error_msg": message,
             "request_id": g.get("request_id"),
             "ip": request.remote_addr,
             "method": request.method,
